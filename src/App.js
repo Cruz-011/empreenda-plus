@@ -8,8 +8,13 @@ import Vendas from './pages/Vendas';
 import styled from 'styled-components';
 
 const Content = styled.div`
-  margin-left: 240px; // mesmo valor da largura da Sidebar
+  margin-left: 70px;
   padding: 2rem;
+  transition: 0.3s ease;
+
+  @media (min-width: 768px) {
+    margin-left: 220px;
+  }
 `;
 
 function App() {
