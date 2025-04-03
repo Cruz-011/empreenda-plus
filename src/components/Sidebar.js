@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { FiMenu, FiX } from 'react-icons/fi';
 
@@ -93,16 +93,16 @@ const AccountButton = styled.button`
   }
 `;
 
-const Sidebar = () => {
+const Sidebar = ({ onLogout }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const userName = "João Silva";
-
-  const trocarConta = () => {
-    alert("Função de trocar conta em breve.");
-  };
+  const navigate = useNavigate();
+  const userName = localStorage.getItem('userName') || 'Usuário';
 
   const sair = () => {
-    alert("Você saiu da conta!");
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userName');
+    if (onLogout) onLogout(); // <- chama o App.js para esconder sidebar
+    navigate('/login');
   };
 
   return (
@@ -114,7 +114,7 @@ const Sidebar = () => {
       <Logo isOpen={isOpen}>📦 Empreenda+</Logo>
 
       <Nav>
-        <StyledLink to="/">🏠 {isOpen && 'Dashboard'}</StyledLink>
+        <StyledLink to="/dashboard">🏠 {isOpen && 'Dashboard'}</StyledLink>
         <StyledLink to="/estoque">📦 {isOpen && 'Estoque'}</StyledLink>
         <StyledLink to="/vendas">💰 {isOpen && 'Vendas'}</StyledLink>
       </Nav>
@@ -123,7 +123,6 @@ const Sidebar = () => {
 
       <AccountSection isOpen={isOpen}>
         <UserName>👤 {userName}</UserName>
-        <AccountButton onClick={trocarConta}>Trocar Conta</AccountButton>
         <AccountButton onClick={sair}>Sair</AccountButton>
       </AccountSection>
     </SidebarContainer>

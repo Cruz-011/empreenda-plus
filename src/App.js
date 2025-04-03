@@ -4,7 +4,11 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Estoque from './pages/Estoque';
 import Vendas from './pages/Vendas';
+import Login from './pages/Login';
+import Cadastro from './pages/Cadastro';
+import PrivateRoute from './components/PrivateRoute';
 import styled from 'styled-components';
+import { useState } from 'react';
 
 const Content = styled.div`
   margin-left: 70px;
@@ -17,15 +21,31 @@ const Content = styled.div`
 `;
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('userId'));
+
   return (
     <Router>
       <GlobalStyle />
-      <Sidebar />
+      {isLoggedIn && <Sidebar onLogout={() => setIsLoggedIn(false)} />}
       <Content>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/estoque" element={<Estoque />} />
-          <Route path="/vendas" element={<Vendas />} />
+          <Route path="/login" element={<Login onLogin={() => setIsLoggedIn(true)} />} />
+          <Route path="/cadastro" element={<Cadastro onLogin={() => setIsLoggedIn(true)} />} />
+          <Route path="/dashboard" element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          } />
+          <Route path="/estoque" element={
+            <PrivateRoute>
+              <Estoque />
+            </PrivateRoute>
+          } />
+          <Route path="/vendas" element={
+            <PrivateRoute>
+              <Vendas />
+            </PrivateRoute>
+          } />
         </Routes>
       </Content>
     </Router>
