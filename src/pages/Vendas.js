@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 const Container = styled.div`
@@ -103,28 +103,70 @@ const Modal = styled.div`
 `;
 
 const Vendas = () => {
-  const [vendas, setVendas] = useState([
-    { id: 1, cliente: 'João Silva', qtd: 12, valor: 180.00, forma: 'Pix', status: 'Confirmado' },
-    { id: 2, cliente: 'Maria Oliveira', qtd: 5, valor: 90.00, forma: 'Cartão', status: 'Pendente' },
-    { id: 3, cliente: 'Carlos Mendes', qtd: 8, valor: 120.00, forma: 'Dinheiro', status: 'Cancelado' },
-    { id: 4, cliente: 'Ana Souza', qtd: 3, valor: 45.00, forma: 'Pix', status: 'Confirmado' },
-    { id: 5, cliente: 'Pedro Lima', qtd: 10, valor: 150.00, forma: 'Boleto', status: 'Pendente' },
-  ]);
-
+  const [vendas, setVendas] = useState([]);
   const [filtroNome, setFiltroNome] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroForma, setFiltroForma] = useState('');
   const [filtroID, setFiltroID] = useState('');
-
   const [editIndex, setEditIndex] = useState(null);
   const [editData, setEditData] = useState({});
 
+  useEffect(() => {
+    fetch('http://localhost:8080/sales')
+      .then(res => {
+        if (!res.ok) throw new Error('Erro ao carregar vendas');
+        return res.json();
+      })
+      .then(data => setVendas(data))
+      .catch(err => alert('Erro: ' + err.message));
+  }, []);
+
+  const criarVendaExemplo = () => {
+    const nova = {
+      cliente: "Cliente Teste",
+      quantidade: 3,
+      valorTotal: 99.9,
+      formaPagamento: "Pix",
+      status: "Confirmado"
+    };
+
+    fetch('http://localhost:8080/sales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nova)
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Erro ao cadastrar venda');
+        return res.json();
+      })
+      .then(venda => {
+        alert("Venda exemplo cadastrada!");
+        const formatada = {
+          ...venda,
+          qtd: venda.quantidade,
+          valor: venda.valorTotal,
+          forma: venda.formaPagamento
+        };
+        setVendas(prev => [...prev, formatada]);
+      })
+      .catch(err => alert('Erro: ' + err.message));
+  };
+
   const handleDelete = (index) => {
-    if (window.confirm("Excluir venda?")) {
-      const novaLista = [...vendas];
-      novaLista.splice(index, 1);
-      setVendas(novaLista);
-    }
+    const venda = vendas[index];
+    if (!window.confirm("Excluir venda?")) return;
+
+    fetch(`http://localhost:8080/sales/${venda.id}`, {
+      method: 'DELETE'
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Erro ao excluir');
+        const novaLista = [...vendas];
+        novaLista.splice(index, 1);
+        setVendas(novaLista);
+        alert("Venda excluída com sucesso!");
+      })
+      .catch(err => alert("Erro: " + err.message));
   };
 
   const handleEdit = (index) => {
@@ -133,10 +175,47 @@ const Vendas = () => {
   };
 
   const handleSave = () => {
-    const novaLista = [...vendas];
-    novaLista[editIndex] = editData;
-    setVendas(novaLista);
-    setEditIndex(null);
+    const method = editData.id ? 'PUT' : 'POST';
+    const url = editData.id
+      ? `http://localhost:8080/sales/${editData.id}`
+      : 'http://localhost:8080/sales';
+
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente: editData.cliente,
+        quantidade: editData.qtd,
+        valorTotal: editData.valor,
+        formaPagamento: editData.forma,
+        status: editData.status
+      })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Erro ao salvar');
+        return res.json();
+      })
+      .then(saved => {
+        alert("Venda salva com sucesso!");
+        const atualizadas = [...vendas];
+
+        const novaVenda = {
+          ...saved,
+          qtd: saved.quantidade,
+          valor: saved.valorTotal,
+          forma: saved.formaPagamento
+        };
+
+        if (editData.id) {
+          atualizadas[editIndex] = novaVenda;
+        } else {
+          atualizadas.push(novaVenda);
+        }
+
+        setVendas(atualizadas);
+        setEditIndex(null);
+      })
+      .catch(err => alert("Erro: " + err.message));
   };
 
   const vendasFiltradas = vendas.filter(v =>
@@ -171,6 +250,8 @@ const Vendas = () => {
         </Filters>
       </Header>
 
+      <Button typeBtn="edit" onClick={criarVendaExemplo}>Criar Venda Exemplo</Button>
+
       <Table>
         <thead>
           <tr>
@@ -189,7 +270,7 @@ const Vendas = () => {
               <Td>{venda.id}</Td>
               <Td>{venda.cliente}</Td>
               <Td>{venda.qtd}</Td>
-              <Td>R$ {venda.valor.toFixed(2)}</Td>
+              <Td>R$ {venda.valor?.toFixed(2) ?? '0,00'}</Td>
               <Td>{venda.forma}</Td>
               <Td><Status status={venda.status}>{venda.status}</Status></Td>
               <Td>

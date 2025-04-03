@@ -24,18 +24,56 @@ const Input = styled.input`
 
 const Button = styled.button`
   margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
 `;
 
 const QuickForm = () => {
-  const [produto, setProduto] = useState({ nome: '', qtd: '', custo: '', venda: '' });
+  const [produto, setProduto] = useState({
+    nome: '',
+    qtd: '',
+    custo: '',
+    venda: ''
+  });
 
   const handleChange = (e) => {
     setProduto({ ...produto, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = () => {
-    alert(`Produto "${produto.nome}" cadastrado!`);
-    setProduto({ nome: '', qtd: '', custo: '', venda: '' });
+    if (!produto.nome || !produto.qtd || !produto.custo) {
+      alert("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    const payload = {
+      nome: produto.nome,
+      quantidade: parseInt(produto.qtd),
+      preco: parseFloat(produto.custo),
+      descricao: ''
+    };
+
+    fetch('http://localhost:8080/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Erro ao cadastrar');
+        return res.json();
+      })
+      .then(() => {
+        alert(`Produto "${produto.nome}" cadastrado com sucesso!`);
+        setProduto({ nome: '', qtd: '', custo: '', venda: '' });
+      })
+      .catch(err => {
+        alert('Erro ao cadastrar produto: ' + err.message);
+      });
   };
 
   return (
@@ -44,10 +82,10 @@ const QuickForm = () => {
       <Row>
         <Input name="nome" placeholder="Nome do produto" value={produto.nome} onChange={handleChange} />
         <Input name="qtd" placeholder="Quantidade" value={produto.qtd} onChange={handleChange} />
-        <Input name="custo" placeholder="Custo" value={produto.custo} onChange={handleChange} />
-        <Input name="venda" placeholder="Venda" value={produto.venda} onChange={handleChange} />
+        <Input name="custo" placeholder="Preço de custo" value={produto.custo} onChange={handleChange} />
+        <Input name="venda" placeholder="Preço de venda (não usado)" value={produto.venda} onChange={handleChange} />
       </Row>
-      <Button onClick={handleSubmit}>Adicionar</Button>
+      <Button onClick={handleSubmit}>Cadastrar</Button>
     </FormContainer>
   );
 };

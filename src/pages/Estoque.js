@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 const Container = styled.div`
@@ -82,24 +82,52 @@ const Modal = styled.div`
 
 const Estoque = () => {
   const [filtro, setFiltro] = useState('');
-  const [produtos, setProdutos] = useState([
-    { nome: "Água de coco", qtd: 3320, custo: 8.75, venda: 22.5, perc: "157%", att: 200 },
-    { nome: "Melancia", qtd: 500, custo: 8.75, venda: 22.5, perc: "157%", att: -200 },
-    { nome: "Maçã verde", qtd: 100, custo: 8.75, venda: 22.5, perc: "157%", att: -200 },
-    { nome: "Maracujá", qtd: 3320, custo: 8.75, venda: 22.5, perc: "157%", att: 200 },
-    { nome: "Morango", qtd: 200, custo: 8.75, venda: 22.5, perc: "157%", att: 200 },
-  ]);
-
+  const [produtos, setProdutos] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const [editData, setEditData] = useState({});
 
+  useEffect(() => {
+    fetch('http://localhost:8080/products')
+      .then(res => {
+        if (!res.ok) throw new Error('Erro ao carregar produtos');
+        return res.json();
+      })
+      .then(data => {
+        const produtosTratados = data.map(p => ({
+          id: p.id,
+          nome: p.nome,
+          qtd: p.quantidade,
+          custo: p.preco,
+          venda: p.preco * 2.57,
+          perc: "157%",
+          att: 200
+        }));
+        setProdutos(produtosTratados);
+      })
+      .catch(err => {
+        alert('Erro ao carregar produtos: ' + err.message);
+      });
+  }, []);
+
   const handleDelete = (index) => {
-    const confirm = window.confirm("Tem certeza que deseja excluir este produto?");
-    if (confirm) {
-      const novo = [...produtos];
-      novo.splice(index, 1);
-      setProdutos(novo);
-    }
+    const confirmDelete = window.confirm("Tem certeza que deseja excluir este produto?");
+    if (!confirmDelete) return;
+
+    const produto = produtos[index];
+
+    fetch(`http://localhost:8080/products/${produto.id}`, {
+      method: 'DELETE'
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Erro ao deletar');
+        const novo = [...produtos];
+        novo.splice(index, 1);
+        setProdutos(novo);
+        alert("Produto deletado com sucesso!");
+      })
+      .catch(err => {
+        alert("Erro ao deletar produto: " + err.message);
+      });
   };
 
   const handleEdit = (index) => {
@@ -108,17 +136,62 @@ const Estoque = () => {
   };
 
   const handleSave = () => {
-    const atualizado = [...produtos];
-    atualizado[editIndex] = editData;
-    setProdutos(atualizado);
-    setEditIndex(null);
+    const method = editData.id ? 'PUT' : 'POST';
+    const url = editData.id
+      ? `http://localhost:8080/products/${editData.id}`
+      : 'http://localhost:8080/products';
+
+    const body = {
+      nome: editData.nome,
+      preco: editData.custo,
+      quantidade: editData.qtd
+    };
+
+    fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Erro ao salvar');
+        return res.json();
+      })
+      .then(saved => {
+        alert("Produto salvo com sucesso!");
+
+        const atualizado = [...produtos];
+
+        const produtoFormatado = {
+          id: saved.id,
+          nome: saved.nome,
+          custo: saved.preco,
+          qtd: saved.quantidade,
+          venda: saved.preco * 2.57,
+          perc: "157%",
+          att: 200
+        };
+
+        if (editData.id) {
+          atualizado[editIndex] = produtoFormatado;
+        } else {
+          atualizado.push(produtoFormatado);
+        }
+
+        setProdutos(atualizado);
+        setEditIndex(null);
+      })
+      .catch(err => {
+        alert("Erro ao salvar produto: " + err.message);
+      });
   };
 
   const produtosFiltrados = produtos.filter(({ nome }) =>
     nome.toLowerCase().includes(filtro.toLowerCase())
   );
 
-  const totalEstoque = produtosFiltrados.reduce((acc, { qtd }) => acc + qtd, 0);
+  const totalEstoque = produtosFiltrados.reduce((acc, { qtd }) => acc + (qtd || 0), 0);
 
   return (
     <Container>
@@ -130,6 +203,41 @@ const Estoque = () => {
           onChange={(e) => setFiltro(e.target.value)}
         />
       </Header>
+
+      <Button typeBtn="edit" onClick={() => {
+        fetch('http://localhost:8080/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: "Produto Exemplo",
+            descricao: "Gerado automaticamente",
+            preco: 12.5,
+            quantidade: 500
+          })
+        })
+          .then(res => {
+            if (!res.ok) throw new Error('Erro ao adicionar');
+            return res.json();
+          })
+          .then(prod => {
+            alert("Produto adicionado!");
+            setProdutos(prev => [
+              ...prev,
+              {
+                id: prod.id,
+                nome: prod.nome,
+                qtd: prod.quantidade,
+                custo: prod.preco,
+                venda: prod.preco * 2.57,
+                perc: "157%",
+                att: 200
+              }
+            ]);
+          })
+          .catch(err => alert("Erro: " + err.message));
+      }}>
+        Adicionar Produto Exemplo
+      </Button>
 
       <Table>
         <thead>
@@ -145,11 +253,11 @@ const Estoque = () => {
         </thead>
         <tbody>
           {produtosFiltrados.map((p, i) => (
-            <Row key={p.nome} isLow={p.qtd < 300}>
+            <Row key={p.id} isLow={p.qtd < 300}>
               <Td>{p.nome}</Td>
               <Td>{p.qtd}</Td>
-              <Td>R$ {p.custo.toFixed(2)}</Td>
-              <Td>R$ {p.venda.toFixed(2)}</Td>
+              <Td>R$ {p.custo?.toFixed(2) ?? '0,00'}</Td>
+              <Td>R$ {p.venda?.toFixed(2) ?? '0,00'}</Td>
               <Td>{p.perc}</Td>
               <Td style={{ color: p.att >= 0 ? 'green' : 'red' }}>
                 {p.att >= 0 ? `+${p.att}` : p.att}

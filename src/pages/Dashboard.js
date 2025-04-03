@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Card from '../components/Card';
 import Charts from '../components/Charts';
@@ -55,18 +55,30 @@ const SectionTitle = styled.h2`
 const Dashboard = () => {
   const [date, setDate] = useState(new Date());
 
-  const data = {
-    vendasHoje: 419,
-    estoqueAtual: 40700,
-    pagos: 500,
-    pendentes: 210,
-    faturamentoAtual: 'R$ 4.769,47',
-    faturamentoMes: 'R$ 67.484,98',
-    gastosMensais: 'R$ 12.300,00',
-    proximoPagamento: '30/03/2025',
-    produtosBaixoEstoque: 6,
-    totalProdutos: 128,
-  };
+  const [data, setData] = useState({
+    vendasHoje: 0,
+    estoqueAtual: 0,
+    pagos: 0,
+    pendentes: 0,
+    faturamentoAtual: 'R$ 0,00',
+    faturamentoMes: 'R$ 0,00',
+    gastosMensais: 'R$ 0,00',
+    proximoPagamento: '',
+    produtosBaixoEstoque: 0,
+    totalProdutos: 0,
+  });
+
+  useEffect(() => {
+    fetch('http://localhost:8080/dashboard')
+      .then(res => {
+        if (!res.ok) throw new Error('Erro ao carregar o dashboard');
+        return res.json();
+      })
+      .then(setData)
+      .catch(err => {
+        alert('Erro ao carregar dados do dashboard: ' + err.message);
+      });
+  }, []);
 
   return (
     <Wrapper>
@@ -87,7 +99,7 @@ const Dashboard = () => {
       </Grid>
 
       <AlertBox>
-        ⚠️ Atenção: 6 produtos estão com estoque abaixo do mínimo. Reabastecimento sugerido.
+        ⚠️ Atenção: {data.produtosBaixoEstoque} produtos estão com estoque abaixo do mínimo. Reabastecimento sugerido.
       </AlertBox>
 
       <SectionTitle>📅 Pagamentos e Agenda</SectionTitle>
